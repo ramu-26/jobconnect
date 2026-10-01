@@ -1,4 +1,4 @@
-import {useState, type FormEvent} from "react";
+import {useState, type FormEvent, type ChangeEvent} from "react";
 import {Link, useNavigate} from "react-router-dom";
 import {BriefcaseBusiness} from "lucide-react";
 import toast from "react-hot-toast";
@@ -12,22 +12,44 @@ export default function Register() {
     email: "",
     password: "",
     role: "employee",
+    company_name: "",
+    phone: "",
+    location: "",
   });
 
   const [loading, setLoading] = useState(false);
 
-  function handleChange(
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
-  ) {
+  function handleChange(e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     setForm({...form, [e.target.name]: e.target.value});
   }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    // Validate company details only for company accounts
+    if (
+      form.role === "company" &&
+      (!form.company_name.trim() || !form.phone.trim() || !form.location.trim())
+    ) {
+      toast.error("Company name, phone, and location are required.");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      await api.post("/auth/register", form);
+      // Send only the relevant fields for the selected role
+      const payload =
+        form.role === "company"
+          ? form
+          : {
+              name: form.name,
+              email: form.email,
+              password: form.password,
+              role: form.role,
+            };
+
+      await api.post("/auth/register", payload);
 
       toast.success("Registration successful! Please log in.");
       navigate("/login");
@@ -41,6 +63,9 @@ export default function Register() {
       setLoading(false);
     }
   }
+
+  const inputClass =
+    "w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-orange-500";
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -65,7 +90,7 @@ export default function Register() {
           <form onSubmit={handleSubmit} className="mt-7 space-y-5">
             <div>
               <label className="mb-2 block text-sm font-medium">
-                Full name
+                {form.role === "company" ? "Your full name" : "Full name"}
               </label>
               <input
                 name="name"
@@ -73,7 +98,7 @@ export default function Register() {
                 onChange={handleChange}
                 required
                 placeholder="Enter your name"
-                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-orange-500"
+                className={inputClass}
               />
             </div>
 
@@ -88,7 +113,7 @@ export default function Register() {
                 onChange={handleChange}
                 required
                 placeholder="you@example.com"
-                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-orange-500"
+                className={inputClass}
               />
             </div>
 
@@ -102,7 +127,7 @@ export default function Register() {
                 required
                 minLength={8}
                 placeholder="At least 8 characters"
-                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-orange-500"
+                className={inputClass}
               />
             </div>
 
@@ -114,12 +139,61 @@ export default function Register() {
                 name="role"
                 value={form.role}
                 onChange={handleChange}
-                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 outline-none focus:border-orange-500"
+                className={`${inputClass} bg-white`}
               >
                 <option value="employee">Find a job (Employee)</option>
                 <option value="company">Hire people (Company)</option>
               </select>
             </div>
+
+            {form.role === "company" && (
+              <>
+                <div>
+                  <label className="mb-2 block text-sm font-medium">
+                    Company name
+                  </label>
+                  <input
+                    name="company_name"
+                    value={form.company_name}
+                    onChange={handleChange}
+                    required
+                    placeholder="Enter company name"
+                    className={inputClass}
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-medium">
+                    Company phone
+                  </label>
+                  <input
+                    name="phone"
+                    type="tel"
+                    value={form.phone}
+                    onChange={handleChange}
+                    required
+                    pattern="[0-9+\-\s()]{7,20}"
+                    title="Enter a valid phone number"
+                    placeholder="Enter company phone"
+                    className={inputClass}
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-medium">
+                    Company location
+                  </label>
+                  <input
+                    name="location"
+                    value={form.location}
+                    onChange={handleChange}
+                    required
+                    placeholder="Enter city or location"
+                    className={inputClass}
+                  />
+                </div>
+              </>
+            )}
 
             <button
               type="submit"
